@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	_ "github.com/mattn/go-sqlite3"
+    "embed"
+    _ "github.com/mattn/go-sqlite3"
 )
+
+ //go:embed migrations/create_tables.sql   
+var migrations embed.FS
 
 
 func DbInit() (*sql.DB, error){
@@ -24,11 +28,13 @@ func DbInit() (*sql.DB, error){
 
     if _, err := os.Stat(databasePath); err == nil{
         fmt.Printf("Database exists at: %s\n", databasePath)
-        db, err := sql.Open("sqlite3", databasePath)
+        db, err := sql.Open("sqlite3", databasePath + "/grocery_store.db")
         if err != nil{
-            fmt.Println("Error creating database:")
-            fmt.Println(err)
             return nil, fmt.Errorf("There was an error creating the database: %s", err)
+        }
+        err = createDefaultTables(db)
+        if err != nil{
+            return nil,err        
         }
         return db, nil
     } else{
@@ -42,19 +48,31 @@ func DbInit() (*sql.DB, error){
         }else{
             file.Close()
         }
-        db, err := sql.Open("sqlite3", databasePath)
+        db, err := sql.Open("sqlite3", databasePath + "/grocery_store.db")
+
         if err != nil{
-            fmt.Println("Error creating database:")
-            fmt.Println(err)
             return nil, fmt.Errorf("There was an error creating the database: %s", err)
+        }
+
+        err = createDefaultTables(db)
+        if err != nil{
+            return nil,err        
         }
         return db, nil
     }
 }
 
 
-func CreateDefaultTables(db *sql.DB, tableNames []string)(error){
+func createDefaultTables(db *sql.DB)(error){
+    migration, err := migrations.ReadFile("migrations/create_tables.sql")
+    if err != nil{
+        return fmt.Errorf("Error reading migration file: %s", err)
+    }
 
+    _, err = db.Exec(string(migration))
+    if err != nil{
+        return fmt.Errorf("Error creating tables: %s", err)
+    }
 
     return nil
 }
