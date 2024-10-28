@@ -11,11 +11,19 @@ func SetRoutes(db *sql.DB) *http.ServeMux {
     router := http.NewServeMux()
 
     router.HandleFunc("GET /categories", func(w http.ResponseWriter, r *http.Request){
-        handlers.CategoriesHandler(w,r,db)
+        handlers.ListCategories(w,r,db)
+    })
+
+    router.HandleFunc("GET /categories/{id}", func(w http.ResponseWriter, r *http.Request){
+        handlers.GetCategory(w,r,db)
     })
 
     router.HandleFunc("GET /grocery_items", func(w http.ResponseWriter, r *http.Request){
-        handlers.GroceryItemsHandler(w,r,db)
+        handlers.ListGroceryItems(w,r,db)
+    })
+
+    router.HandleFunc("GET /grocery_items/{id}", func(w http.ResponseWriter, r *http.Request){
+        handlers.GetGroceryItem(w,r,db)
     })
 
     return router

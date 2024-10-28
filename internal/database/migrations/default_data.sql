@@ -35,3 +35,9 @@ INSERT INTO grocery_items (name, unit_price, stock, category_id) VALUES
     ('Tomato',1,90,1),
     ('Onion',0.6,140,1)
 ;
+
+INSERT INTO order_statuses (status) VALUES
+    ('created'),
+    ('completed'),
+    ('cancelled')
+    ;
