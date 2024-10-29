@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-
 	"github.com/Adam-Arezza/gocery-store/internal/database"
 	"github.com/Adam-Arezza/gocery-store/internal/routes"
 )

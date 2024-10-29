@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -13,14 +14,16 @@ type Category struct {
     Name string `json:"category"`
 }
 
+
 func ListCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var categories []Category
     categoriesQuery := `SELECT * from categories;`
     rows, err := db.Query(categoriesQuery)
-//need to change how the errors are handled here, shouldn't pass them to the user
+
     if err != nil{
-        fmt.Printf("Error getting categories: %s", err)
-        fmt.Fprint(writer, fmt.Errorf("There was an error getting the categories..."))
+        log.Printf("Error fetching categories: %s\n", err.Error())
+        http.Error(writer, "Server Error", http.StatusInternalServerError)
+        return
     }
 
     defer rows.Close()
@@ -28,8 +31,9 @@ func ListCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     for rows.Next(){
         var category Category
         if err := rows.Scan(&category.Id, &category.Name); err != nil{
-            fmt.Printf("Error getting categories: %s", err)
-            fmt.Fprint(writer, fmt.Errorf("There was an error getting the categories..."))
+            log.Printf("Error getting categories: %s\n", err.Error())
+            http.Error(writer, "Server Error", http.StatusInternalServerError)
+            return
         }
         categories = append(categories,category)
     }
@@ -38,32 +42,33 @@ func ListCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 }
 
 
-func GetCategory(writer http.ResponseWriter, r *http.Request, db *sql.DB)(error){
+func GetCategory(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var category Category
     categoryId, err := strconv.Atoi(r.PathValue("id"))
-    fmt.Printf("Category id: %d\n", categoryId)
 
     if err != nil{
-        return fmt.Errorf("Error getting category: %s", err)
+        log.Printf("Ivalid URL path value 'id': %s\n Error: %s", r.PathValue("id"), err.Error())
+        http.Error(writer, fmt.Sprintf("Ivalid URL path value 'id': %s", r.PathValue("id")), http.StatusBadRequest)
+        return
     }
 
     categoryQuery := `SELECT * FROM categories WHERE id = ?;`
     err = db.QueryRow(categoryQuery, categoryId).Scan(&category.Id,&category.Name)
 
     if err != nil{
-        fmt.Printf("error in query: %s\n",err)
-        return fmt.Errorf("Error getting category: %s", err)
+        log.Printf("%s\n", err.Error())
+        http.Error(writer, "Couldn't find Category", http.StatusNotFound)
+        return
     }
 
     writer.Header().Add("Content-Type", "application/json")
-    fmt.Printf("The category is: %s", category.Name)
     err = json.NewEncoder(writer).Encode(category)
 
     if err != nil {
-        return fmt.Errorf("Error writing json data: %s", err)
+        log.Printf("Error in response: %s", err.Error())
+        http.Error(writer, "Server Error", http.StatusInternalServerError)
+        return
     }
-
-    return nil
 }
 
 
