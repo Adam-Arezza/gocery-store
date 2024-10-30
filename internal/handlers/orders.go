@@ -11,6 +11,7 @@ type Order struct {
     Id int `json:"id"`
     CustomerId int `json:"customer_id"`
     Date string `json:"date"`
+    Status string `json:"order_status"`
 }
 
 type OrderItem struct{
@@ -19,4 +20,8 @@ type OrderItem struct{
     ItemId int `json:"item_id"`
     Quantity int `json:"quantity"`
 }
+
+//create order
+//update order
+//cancel order
 
