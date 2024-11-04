@@ -26,6 +26,10 @@ func SetRoutes(db *sql.DB) *http.ServeMux {
         handlers.GetGroceryItem(w,r,db)
     })
 
+    router.HandleFunc("GET /customers", func(w http.ResponseWriter, r *http.Request){
+        handlers.ListCustomers(w,r,db)
+    })
+
     router.HandleFunc("POST /customers", func(w http.ResponseWriter, r *http.Request){
         handlers.CreateCustomer(w,r,db)
     })

@@ -68,6 +68,32 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     http.Error(writer, "User already exists", http.StatusConflict)
 }
 
+func ListCustomers(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+    var customers []Customer
+    customersQuery := `SELECT * from customers;`
+    rows, err := db.Query(customersQuery)
+
+    if err != nil{
+        log.Printf("Error fetching customers: %s\n", err.Error())
+        http.Error(writer, "Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    defer rows.Close()
+
+    for rows.Next(){
+        var customer Customer        
+        if err := rows.Scan(&customer.Id, &customer.Name, &customer.Email); err != nil{
+            log.Printf("Error getting customers: %s\n", err.Error())
+            http.Error(writer, "Server Error", http.StatusInternalServerError)
+            return
+        }
+        customers = append(customers,customer)
+    }
+    writer.Header().Add("Content-Type", "application/json")
+    json.NewEncoder(writer).Encode(customers)
+}
+
 func GetCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var customer Customer
     customerId, err := strconv.Atoi(r.PathValue("id"))
@@ -96,3 +122,4 @@ func GetCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         return
     }
 }
+
