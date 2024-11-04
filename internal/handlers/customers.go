@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-    "fmt"
 )
 
 type Customer struct {
@@ -14,16 +13,10 @@ type Customer struct {
 	Email string `json:"email"`
 }
 
-//create user
-//update user
-//delete user
-//list users
-
 func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    contentType := r.Header.Get("Content-Type")
-    fmt.Printf("content type: %s", contentType)
     var newCustomer Customer
     var customer Customer
+    
     decoder := json.NewDecoder(r.Body)
     decoder.DisallowUnknownFields()
     err := decoder.Decode(&newCustomer)
@@ -33,24 +26,37 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         return
     }
 
-    //database
-    //check if customer already exists (don't create a duplicate)
-    //add the new customer to the db
-    //return successful http response with the customer
-    //or an http error
     checkCustomerQuery := `SELECT * from customers WHERE email = ?;`
-    err = db.QueryRow(checkCustomerQuery, customer.Email).Scan(&customer.Id,&customer.Name,&customer.Email)
+    err = db.QueryRow(checkCustomerQuery, newCustomer.Email).Scan(&customer.Id,&customer.Name,&customer.Email)
 
-    //no customer was found, add new one
+    //no customer was found, try to add new one
     if err == sql.ErrNoRows{
+        var result sql.Result
         log.Println("No rows in result") 
+        log.Printf("Adding new customer: %s, %s\n", newCustomer.Name, newCustomer.Email)
         newCustomerQuery := `INSERT INTO customers (name, email) VALUES(?,?);`
-        err = db.QueryRow(newCustomerQuery, customer.Name, customer.Email).Scan(&newCustomer.Id,&newCustomer.Name, &newCustomer.Email)
+        result, err = db.Exec(newCustomerQuery, newCustomer.Name, newCustomer.Email)
 
+        if err != nil{
+            log.Println("error executing add new user query")
+            return
+        }
+
+        //check result of query
+        if rows, err := result.RowsAffected(); err != nil || rows < 1{
+            log.Println("error with query result")
+            log.Printf("%s\n", err)
+            return
+        }else{
+            rowId, _ := result.LastInsertId()
+            newCustomer.Id = int(rowId)
+            json.NewEncoder(writer).Encode(newCustomer)
+            return
+        }
     }
 
     //there is an error and no customer found
-    if err != nil && err != sql.ErrNoRows{
+    if err != nil{
         log.Printf("Error checking for customer: %s", err.Error())
         http.Error(writer, "Server error", http.StatusInternalServerError)
         return
