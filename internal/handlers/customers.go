@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+    "strconv"
+    "fmt"
 )
 
 type Customer struct {
@@ -64,4 +66,33 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 
     //customer was found already
     http.Error(writer, "User already exists", http.StatusConflict)
+}
+
+func GetCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+    var customer Customer
+    customerId, err := strconv.Atoi(r.PathValue("id"))
+
+    if err != nil{
+        log.Printf("Ivalid URL path value 'id': %s\n Error: %s", r.PathValue("id"), err.Error())
+        http.Error(writer, fmt.Sprintf("Ivalid URL path value 'id': %s", r.PathValue("id")), http.StatusBadRequest)
+        return
+    }
+
+    customerQuery := `SELECT * FROM customers WHERE id = ?;`
+    err = db.QueryRow(customerQuery, customerId).Scan(&customer.Id,&customer.Name,&customer.Email)
+
+    if err != nil{
+        log.Printf("%s\n", err.Error())
+        http.Error(writer, "Couldn't find Customer", http.StatusNotFound)
+        return
+    }
+
+    writer.Header().Add("Content-Type", "application/json")
+    err = json.NewEncoder(writer).Encode(customer)
+
+    if err != nil {
+        log.Printf("Error in response: %s", err.Error())
+        http.Error(writer, "Server Error", http.StatusInternalServerError)
+        return
+    }
 }
