@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+    "fmt"
 )
 
 type GroceryItem struct {
@@ -16,35 +17,58 @@ type GroceryItem struct {
     CategoryId int `json:"category_id"`
 }
 
-func ListGroceryItems(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+func GetGroceryItems(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var groceries []GroceryItem
-    groceryQuery := `SELECT * from grocery_items;`
-    rows, err := db.Query(groceryQuery)
+    groceryName := r.URL.Query().Get("name")
+    if groceryName == ""{
+        groceryQuery := `SELECT * from grocery_items;`
+        rows, err := db.Query(groceryQuery)
 
-    if err != nil{
-        log.Printf("Error getting grocery items: %s", err.Error())
-        http.Error(writer, "Server Error", http.StatusInternalServerError)
-        return
-    }
-
-    defer rows.Close()
-
-    for rows.Next(){
-        var groceryItem GroceryItem
-
-        err := rows.Scan(&groceryItem.Id, &groceryItem.Name, &groceryItem.UnitPrice, &groceryItem.Stock, &groceryItem.CategoryId);
         if err != nil{
-            log.Printf("Error reading database: %s", err.Error())
+            log.Printf("Error getting grocery items: %s", err.Error())
             http.Error(writer, "Server Error", http.StatusInternalServerError)
             return
         }
-        groceries = append(groceries, groceryItem)
+
+        defer rows.Close()
+
+        for rows.Next(){
+            var groceryItem GroceryItem
+
+            err := rows.Scan(&groceryItem.Id, &groceryItem.Name, &groceryItem.UnitPrice, &groceryItem.Stock, &groceryItem.CategoryId);
+            if err != nil{
+                log.Printf("Error reading database: %s", err.Error())
+                http.Error(writer, "Server Error", http.StatusInternalServerError)
+                return
+            }
+            groceries = append(groceries, groceryItem)
+        }
+        writer.Header().Add("Content-Type", "application/json")
+        json.NewEncoder(writer).Encode(groceries)
+        return
+    }else{
+                //add some kind of validation for the grocery names
+        var groceryItem GroceryItem
+        var err error
+        groceryItem, err = getGroceryItemByName(groceryName, db)
+        if err != nil && err == sql.ErrNoRows{
+            log.Printf("No grocery item found with name\n")
+            noItemMsg := fmt.Sprintf("No grocery item with name: %s", groceryName)
+            http.Error(writer, noItemMsg, http.StatusNotFound)
+            return
+        }
+
+        writer.Header().Add("Content-Type", "application/json")
+        err = json.NewEncoder(writer).Encode(groceryItem)
+        if err != nil{
+            log.Printf("Error in response: %s", err.Error())
+            http.Error(writer, "Server error", http.StatusInternalServerError)
+            return
+        }
     }
-    writer.Header().Add("Content-Type", "application/json")
-    json.NewEncoder(writer).Encode(groceries)
 }
 
-func GetGroceryItem(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+func GetGroceryItemById(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var groceryItem GroceryItem
     groceryItemId, err := strconv.Atoi(r.PathValue("id"))
     if err != nil{
@@ -72,4 +96,15 @@ func GetGroceryItem(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     }
 }
 
-
+func getGroceryItemByName(name string, db *sql.DB)(GroceryItem, error){
+    var groceryItem GroceryItem
+    groceryQuery := fmt.Sprintf(`SELECT * FROM grocery_items WHERE name='%s'`, name)
+    err := db.QueryRow(groceryQuery, name).Scan(&groceryItem.Id, &groceryItem.Name, &groceryItem.UnitPrice, &groceryItem.Stock, &groceryItem.CategoryId)
+    if err != nil{
+        log.Println(groceryQuery)
+        log.Printf("Error getting grocery item: %s",err.Error())
+        return groceryItem, err
+    }else{
+        return groceryItem, nil
+    }
+}

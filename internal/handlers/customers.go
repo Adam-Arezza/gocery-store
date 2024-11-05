@@ -7,6 +7,7 @@ import (
 	"net/http"
     "strconv"
     "fmt"
+    "regexp"
 )
 
 type Customer struct {
@@ -68,33 +69,66 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     http.Error(writer, "User already exists", http.StatusConflict)
 }
 
-func ListCustomers(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+func GetCustomers(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var customers []Customer
-    customersQuery := `SELECT * from customers;`
-    rows, err := db.Query(customersQuery)
 
-    if err != nil{
-        log.Printf("Error fetching customers: %s\n", err.Error())
-        http.Error(writer, "Server Error", http.StatusInternalServerError)
-        return
-    }
+    //check for email query param
+    email := r.URL.Query().Get("email")
+    if email == ""{
+        customersQuery := `SELECT * from customers;`
+        rows, err := db.Query(customersQuery)
 
-    defer rows.Close()
-
-    for rows.Next(){
-        var customer Customer        
-        if err := rows.Scan(&customer.Id, &customer.Name, &customer.Email); err != nil{
-            log.Printf("Error getting customers: %s\n", err.Error())
+        if err != nil{
+            log.Printf("Error fetching customers: %s\n", err.Error())
             http.Error(writer, "Server Error", http.StatusInternalServerError)
             return
         }
-        customers = append(customers,customer)
+
+        defer rows.Close()
+
+        for rows.Next(){
+            var customer Customer        
+            if err := rows.Scan(&customer.Id, &customer.Name, &customer.Email); err != nil{
+                log.Printf("Error getting customers: %s\n", err.Error())
+                http.Error(writer, "Server Error", http.StatusInternalServerError)
+                return
+            }
+            customers = append(customers,customer)
+        }
+        writer.Header().Add("Content-Type", "application/json")
+        json.NewEncoder(writer).Encode(customers)
+        return
+    }else{
+
+        emailIsValid := validateEmail(email)
+
+        if !emailIsValid{
+            http.Error(writer, "Invalid request parameter: email", http.StatusBadRequest)
+            return
+        }
+
+        var customer Customer
+        customer, err := getCustomerByEmail(email, db)
+        if err != nil && err == sql.ErrNoRows{
+            log.Printf("No user found with email\n")
+            noUserMsg := fmt.Sprintf("No user found with email: %s", email)
+            http.Error(writer, noUserMsg, http.StatusNotFound)
+            return
+        }
+
+        writer.Header().Add("Content-Type", "application/json")
+        err = json.NewEncoder(writer).Encode(customer)
+
+        if err != nil {
+            log.Printf("Error in response: %s", err.Error())
+            http.Error(writer, "Server Error", http.StatusInternalServerError)
+            return
+        }
+        return
     }
-    writer.Header().Add("Content-Type", "application/json")
-    json.NewEncoder(writer).Encode(customers)
 }
 
-func GetCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+func GetCustomerById(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var customer Customer
     customerId, err := strconv.Atoi(r.PathValue("id"))
 
@@ -123,3 +157,28 @@ func GetCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     }
 }
 
+func getCustomerByEmail(email string, db *sql.DB)(Customer, error){
+    var customer Customer
+    customerQuery := `SELECT * FROM customers WHERE email = ?;`
+    err := db.QueryRow(customerQuery, email).Scan(&customer.Id,&customer.Name,&customer.Email)
+
+    if err != nil{
+        log.Printf("%s\n", err.Error())
+        return customer,err
+    }else{
+        return customer, nil
+    }
+}
+
+
+func validateEmail(email string)bool{
+    	// Define a regex pattern for email validation
+	// This is a simplified regex for basic email validation
+	const emailRegexPattern = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	
+	// Compile the regex
+	emailRegex := regexp.MustCompile(emailRegexPattern)
+	
+	// Return whether the email matches the pattern
+	return emailRegex.MatchString(email)
+}

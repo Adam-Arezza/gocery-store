@@ -15,7 +15,7 @@ type Category struct {
 }
 
 
-func ListCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+func GetCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var categories []Category
     categoriesQuery := `SELECT * from categories;`
     rows, err := db.Query(categoriesQuery)
@@ -42,7 +42,7 @@ func ListCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 }
 
 
-func GetCategory(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+func GetCategoryById(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var category Category
     categoryId, err := strconv.Atoi(r.PathValue("id"))
 

@@ -10,24 +10,27 @@ import (
 func SetRoutes(db *sql.DB) *http.ServeMux {
     router := http.NewServeMux()
 
+    //categories
     router.HandleFunc("GET /categories", func(w http.ResponseWriter, r *http.Request){
-        handlers.ListCategories(w,r,db)
+        handlers.GetCategories(w,r,db)
     })
 
     router.HandleFunc("GET /categories/{id}", func(w http.ResponseWriter, r *http.Request){
-        handlers.GetCategory(w,r,db)
+        handlers.GetCategoryById(w,r,db)
     })
 
+    //grocery_items
     router.HandleFunc("GET /grocery_items", func(w http.ResponseWriter, r *http.Request){
-        handlers.ListGroceryItems(w,r,db)
+        handlers.GetGroceryItems(w,r,db)
     })
 
     router.HandleFunc("GET /grocery_items/{id}", func(w http.ResponseWriter, r *http.Request){
-        handlers.GetGroceryItem(w,r,db)
+        handlers.GetGroceryItemById(w,r,db)
     })
 
+    //customers
     router.HandleFunc("GET /customers", func(w http.ResponseWriter, r *http.Request){
-        handlers.ListCustomers(w,r,db)
+        handlers.GetCustomers(w,r,db)
     })
 
     router.HandleFunc("POST /customers", func(w http.ResponseWriter, r *http.Request){
@@ -35,7 +38,8 @@ func SetRoutes(db *sql.DB) *http.ServeMux {
     })
 
     router.HandleFunc("GET /customers/{id}", func(w http.ResponseWriter, r *http.Request){
-        handlers.GetCustomer(w,r,db)
+        handlers.GetCustomerById(w,r,db)
     })
+
     return router
 }
