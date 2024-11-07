@@ -41,5 +41,10 @@ func SetRoutes(db *sql.DB) *http.ServeMux {
         handlers.GetCustomerById(w,r,db)
     })
 
+    //orders
+    router.HandleFunc("POST /orders", func(w http.ResponseWriter, r *http.Request){
+        handlers.CreateOrder(w,r,db)
+    })
+
     return router
 }

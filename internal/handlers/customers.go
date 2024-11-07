@@ -18,7 +18,6 @@ type Customer struct {
 
 func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var newCustomer Customer
-    var customer Customer
     
     decoder := json.NewDecoder(r.Body)
     decoder.DisallowUnknownFields()
@@ -29,11 +28,14 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         return
     }
 
-    checkCustomerQuery := `SELECT * from customers WHERE email = ?;`
-    err = db.QueryRow(checkCustomerQuery, newCustomer.Email).Scan(&customer.Id,&customer.Name,&customer.Email)
+    isExistingCustomer, err := checkIsExistingCustomer(newCustomer, db)
+    if err != nil {
+        http.Error(writer, "Server error", http.StatusInternalServerError)
+        return
+    }
 
     //no customer was found, try to add new one
-    if err == sql.ErrNoRows{
+    if !isExistingCustomer{
         var result sql.Result
         log.Println("No rows in result") 
         log.Printf("Adding new customer: %s, %s\n", newCustomer.Name, newCustomer.Email)
@@ -58,14 +60,6 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         }
     }
 
-    //there is an error and no customer found
-    if err != nil{
-        log.Printf("Error checking for customer: %s", err.Error())
-        http.Error(writer, "Server error", http.StatusInternalServerError)
-        return
-    }
-
-    //customer was found already
     http.Error(writer, "User already exists", http.StatusConflict)
 }
 
@@ -181,4 +175,22 @@ func validateEmail(email string)bool{
 	
 	// Return whether the email matches the pattern
 	return emailRegex.MatchString(email)
+}
+
+func checkIsExistingCustomer(customer Customer, db *sql.DB)(bool,error){
+    var existingCustomer Customer
+    checkCustomerQuery := `SELECT * FROM customers WHERE email = ?;`
+    err := db.QueryRow(checkCustomerQuery, customer.Email).Scan(&existingCustomer.Id,
+                                                                &existingCustomer.Name,
+                                                                &existingCustomer.Email)
+    if err != nil && err == sql.ErrNoRows{
+        return false,nil
+    }
+
+    if err != nil{
+        log.Printf("error checking existing customer: %s", err.Error())
+        return false, err
+    }
+
+    return true, nil
 }
