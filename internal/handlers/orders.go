@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+type OrderRequestItem struct {
+    ItemId int
+    Quantity int
+}
+
 type Order struct {
     Id int `json:"id"`
     CustomerId int `json:"customer_id"`
@@ -25,6 +30,12 @@ type OrderItem struct{
 type OrderStatus struct{
     Id int `json:"id"`
     Status string `json:"status"`
+}
+
+type UpdateOrderRequest struct{
+    CustomerId int
+    ItemList []OrderRequestItem
+    OrderId int
 }
 
 //create order
@@ -87,7 +98,95 @@ func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     }
 }
 
+func UpdateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+    //get the order items from the request body
+    var orderItems []OrderItem
+    var orderRequest UpdateOrderRequest
+    decoder := json.NewDecoder(r.Body)
+    decoder.DisallowUnknownFields()
+    err := decoder.Decode(&orderRequest)
+    if err != nil{
+        log.Printf("Error parsing request: %s", err.Error())
+        http.Error(writer, "Error parsing request", http.StatusBadRequest)
+        return
+    }
+    
+    //validate the order belongs to the customer making the change
+    validOrder := orderBelongsToCustomer(orderRequest.CustomerId, orderRequest.OrderId, db)
+    if !validOrder{
+        log.Printf("Invalid order request")
+        http.Error(writer, "The order was invalid", http.StatusBadRequest)
+        return
+    }
 
-//update order
-//cancel order
+    for item := range orderRequest.ItemList {
+        newOrderItem := OrderItem{ItemId: orderRequest.ItemList[item].ItemId, 
+                                  OrderId: orderRequest.OrderId, 
+                                  Quantity: orderRequest.ItemList[item].Quantity}
+        orderItems = append(orderItems, newOrderItem)
+    }
+    addOrderItemsToOrder(orderItems, db)
+}
+
+//get orders by customer
+
+func GetOrders(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+
+}
+
+//cancel order 
+func CancelOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+
+}
+
+func orderBelongsToCustomer(customerId int, orderId int, db *sql.DB)(bool){
+    query := `SELECT * FROM orders WHERE customer_id = ? AND id = ?;`
+    _,err := db.Query(query, customerId, orderId)
+    if err != nil && err == sql.ErrNoRows{
+        log.Printf("No orders found for customer")
+        return false
+    }
+    if err != nil{
+        log.Printf("%s", err.Error())
+        return false
+    }
+    return true
+}
+
+func addOrderItemsToOrder(orderItems []OrderItem, db *sql.DB){
+    for _,v := range orderItems{
+        if checkItemStock(v, db) <= v.Quantity{
+            //there is enough stock to fulfill the addOrderItemsToOrder
+            orderItemQuery := `INSERT INTO order_item (order_id, item_id, quantity) VALUES (?,?,?);`
+            result, err := db.Exec(orderItemQuery, v.OrderId, v.ItemId, v.Quantity)
+            if err != nil{
+                log.Printf("Could not add order item: %v, %s",v,err.Error())
+            }
+            if id, err := result.LastInsertId(); err != nil{
+                log.Printf("Error adding order item: %s", err.Error())
+            }else{
+                log.Printf("Added new order item with id: %v",id)
+            }
+        }else{
+            //there is not enough stock to fulfill the order
+            log.Printf("Not enough stock to fulfill the order.")
+        }
+    }
+}
+
+func checkItemStock(orderItem OrderItem, db *sql.DB)int{
+    var item GroceryItem
+    query := `SELECT stock FROM grocery_items WHERE item_id = ?;`
+    err := db.QueryRow(query, orderItem.ItemId).Scan(&item)
+    if err != nil{
+        if err == sql.ErrNoRows{
+            log.Printf("No grocery item found: %v, %s\n", item.Id, item.Name)
+            return 0
+        }else{
+            log.Printf(err.Error())
+            return 0
+        }
+    }
+    return item.Stock
+}
 
