@@ -5,19 +5,20 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type OrderRequestItem struct {
-    ItemId int
-    Quantity int
+    ItemId int `json:"item_id"`
+    Quantity int `json:"quantity"`
 }
 
 type Order struct {
     Id int `json:"id"`
     CustomerId int `json:"customer_id"`
     Date string `json:"date"`
-    Status string `json:"order_status"`
+    StatusId int `json:"order_status"`
 }
 
 type OrderItem struct{
@@ -33,9 +34,9 @@ type OrderStatus struct{
 }
 
 type UpdateOrderRequest struct{
-    CustomerId int
+    CustomerId int `json:"customer_id"`
     ItemList []OrderRequestItem
-    OrderId int
+    OrderId int `json:"order_id"`
 }
 
 //create order
@@ -75,7 +76,7 @@ func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     newOrder := Order{
         CustomerId: customer.Id,
         Date: time.Now().String(),
-        Status: orderStatus.Status,
+        StatusId: orderStatus.Id,
     }
 
     orderQuery := `INSERT INTO orders (customer_id, date, status_id) VALUES(?,?,?);`
@@ -102,9 +103,14 @@ func UpdateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     //get the order items from the request body
     var orderItems []OrderItem
     var orderRequest UpdateOrderRequest
+    orderId, err := strconv.Atoi(r.PathValue("id"))
+    if err != nil {
+        log.Printf("Error with order id in request")
+    }
+    log.Printf("The order id is: %d", orderId)
     decoder := json.NewDecoder(r.Body)
     decoder.DisallowUnknownFields()
-    err := decoder.Decode(&orderRequest)
+    err = decoder.Decode(&orderRequest)
     if err != nil{
         log.Printf("Error parsing request: %s", err.Error())
         http.Error(writer, "Error parsing request", http.StatusBadRequest)
@@ -131,7 +137,30 @@ func UpdateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 //get orders by customer
 
 func GetOrders(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+    var orders []Order
+    ordersQuery := `SELECT * from orders;`
+    rows, err := db.Query(ordersQuery)
 
+    if err != nil{
+        log.Printf("Error fetching orders: %s\n", err.Error())
+        http.Error(writer, "Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    defer rows.Close()
+
+    for rows.Next(){
+        var order Order
+        if err := rows.Scan(&order.Id, &order.CustomerId, &order.Date, &order.StatusId); err != nil{
+            log.Printf("Error getting categories: %s\n", err.Error())
+            http.Error(writer, "Server Error", http.StatusInternalServerError)
+            return
+        }
+        orders  = append(orders,order)
+    }
+    log.Print(orders)
+    writer.Header().Add("Content-Type", "application/json")
+    json.NewEncoder(writer).Encode(orders)
 }
 
 //cancel order 
