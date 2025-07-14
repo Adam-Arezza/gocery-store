@@ -8,16 +8,17 @@ import (
     "strconv"
     "fmt"
     "regexp"
+    "github.com/Adam-Arezza/gocery-store/internal/models"
 )
 
-type Customer struct {
-	Id    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
+//type Customer struct {
+//	Id    int    `json:"id"`
+//	Name  string `json:"name"`
+//	Email string `json:"email"`
+//}
 
 func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var newCustomer Customer
+    var newCustomer models.Customer
     
     decoder := json.NewDecoder(r.Body)
     decoder.DisallowUnknownFields()
@@ -64,7 +65,7 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 }
 
 func GetCustomers(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var customers []Customer
+    var customers []models.Customer
 
     //check for email query param
     email := r.URL.Query().Get("email")
@@ -81,7 +82,7 @@ func GetCustomers(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         defer rows.Close()
 
         for rows.Next(){
-            var customer Customer        
+            var customer models.Customer        
             if err := rows.Scan(&customer.Id, &customer.Name, &customer.Email); err != nil{
                 log.Printf("Error getting customers: %s\n", err.Error())
                 http.Error(writer, "Server Error", http.StatusInternalServerError)
@@ -101,7 +102,7 @@ func GetCustomers(writer http.ResponseWriter, r *http.Request, db *sql.DB){
             return
         }
 
-        var customer Customer
+        var customer models.Customer
         customer, err := getCustomerByEmail(email, db)
         if err != nil && err == sql.ErrNoRows{
             log.Printf("No user found with email\n")
@@ -123,7 +124,7 @@ func GetCustomers(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 }
 
 func GetCustomerById(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var customer Customer
+    var customer models.Customer
     customerId, err := strconv.Atoi(r.PathValue("id"))
 
     if err != nil{
@@ -151,46 +152,46 @@ func GetCustomerById(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     }
 }
 
-func getCustomerByEmail(email string, db *sql.DB)(Customer, error){
-    var customer Customer
-    customerQuery := `SELECT * FROM customers WHERE email = ?;`
-    err := db.QueryRow(customerQuery, email).Scan(&customer.Id,&customer.Name,&customer.Email)
+//func getCustomerByEmail(email string, db *sql.DB)(models.Customer, error){
+//    var customer models.Customer
+//    customerQuery := `SELECT * FROM customers WHERE email = ?;`
+//    err := db.QueryRow(customerQuery, email).Scan(&customer.Id,&customer.Name,&customer.Email)
+//
+//    if err != nil{
+//        log.Printf("%s\n", err.Error())
+//        return customer,err
+//    }else{
+//        return customer, nil
+//    }
+//}
 
-    if err != nil{
-        log.Printf("%s\n", err.Error())
-        return customer,err
-    }else{
-        return customer, nil
-    }
-}
 
-
-func validateEmail(email string)bool{
-    	// Define a regex pattern for email validation
-	// This is a simplified regex for basic email validation
-	const emailRegexPattern = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
-	
-	// Compile the regex
-	emailRegex := regexp.MustCompile(emailRegexPattern)
-	
-	// Return whether the email matches the pattern
-	return emailRegex.MatchString(email)
-}
-
-func checkIsExistingCustomer(customer Customer, db *sql.DB)(bool,error){
-    var existingCustomer Customer
-    checkCustomerQuery := `SELECT * FROM customers WHERE email = ?;`
-    err := db.QueryRow(checkCustomerQuery, customer.Email).Scan(&existingCustomer.Id,
-                                                                &existingCustomer.Name,
-                                                                &existingCustomer.Email)
-    if err != nil && err == sql.ErrNoRows{
-        return false,nil
-    }
-
-    if err != nil{
-        log.Printf("error checking existing customer: %s", err.Error())
-        return false, err
-    }
-
-    return true, nil
-}
+//func validateEmail(email string)bool{
+//    	// Define a regex pattern for email validation
+//	// This is a simplified regex for basic email validation
+//	const emailRegexPattern = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+//	
+//	// Compile the regex
+//	emailRegex := regexp.MustCompile(emailRegexPattern)
+//	
+//	// Return whether the email matches the pattern
+//	return emailRegex.MatchString(email)
+//}
+//
+//func checkIsExistingCustomer(customer models.Customer, db *sql.DB)(bool,error){
+//    var existingCustomer models.Customer
+//    checkCustomerQuery := `SELECT * FROM customers WHERE email = ?;`
+//    err := db.QueryRow(checkCustomerQuery, customer.Email).Scan(&existingCustomer.Id,
+//                                                                &existingCustomer.Name,
+//                                                                &existingCustomer.Email)
+//    if err != nil && err == sql.ErrNoRows{
+//        return false,nil
+//    }
+//
+//    if err != nil{
+//        log.Printf("error checking existing customer: %s", err.Error())
+//        return false, err
+//    }
+//
+//    return true, nil
+//}

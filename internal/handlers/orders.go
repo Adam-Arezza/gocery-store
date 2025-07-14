@@ -7,41 +7,42 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+    "github.com/Adam-Arezza/gocery-store/internal/models"
 )
 
-type OrderRequestItem struct {
-    ItemId int `json:"item_id"`
-    Quantity int `json:"quantity"`
-}
-
-type Order struct {
-    Id int `json:"id"`
-    CustomerId int `json:"customer_id"`
-    Date string `json:"date"`
-    StatusId int `json:"order_status"`
-}
-
-type OrderItem struct{
-    Id int `json:"id"`
-    OrderId int `json:"order_id"`
-    ItemId int `json:"item_id"`
-    Quantity int `json:"quantity"`
-}
-
-type OrderStatus struct{
-    Id int `json:"id"`
-    Status string `json:"status"`
-}
-
-type UpdateOrderRequest struct{
-    CustomerId int `json:"customer_id"`
-    ItemList []OrderRequestItem
-    OrderId int `json:"order_id"`
-}
+//type OrderRequestItem struct {
+//    ItemId int `json:"item_id"`
+//    Quantity int `json:"quantity"`
+//}
+//
+//type Order struct {
+//    Id int `json:"id"`
+//    CustomerId int `json:"customer_id"`
+//    Date string `json:"date"`
+//    StatusId int `json:"order_status"`
+//}
+//
+//type OrderItem struct{
+//    Id int `json:"id"`
+//    OrderId int `json:"order_id"`
+//    ItemId int `json:"item_id"`
+//    Quantity int `json:"quantity"`
+//}
+//
+//type OrderStatus struct{
+//    Id int `json:"id"`
+//    Status string `json:"status"`
+//}
+//
+//type UpdateOrderRequest struct{
+//    CustomerId int `json:"customer_id"`
+//    ItemList []OrderRequestItem
+//    OrderId int `json:"order_id"`
+//}
 
 //create order
 func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var customer Customer
+    var customer models.Customer 
     decoder := json.NewDecoder(r.Body)
     decoder.DisallowUnknownFields()
     err := decoder.Decode(&customer)
@@ -64,7 +65,7 @@ func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         return
     }
 
-    var orderStatus OrderStatus
+    var orderStatus models.OrderStatus
     var result sql.Result
     err = db.QueryRow(`SELECT * FROM order_statuses WHERE status='created';`).Scan(&orderStatus.Id, &orderStatus.Status)
     if err != nil && err == sql.ErrNoRows{
@@ -73,7 +74,7 @@ func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         return
     }
 
-    newOrder := Order{
+    newOrder := models.Order{
         CustomerId: customer.Id,
         Date: time.Now().String(),
         StatusId: orderStatus.Id,
@@ -101,8 +102,8 @@ func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 
 func UpdateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     //get the order items from the request body
-    var orderItems []OrderItem
-    var orderRequest UpdateOrderRequest
+    var orderItems []models.OrderItem
+    var orderRequest models.UpdateOrderRequest
     orderId, err := strconv.Atoi(r.PathValue("id"))
     if err != nil {
         log.Printf("Error with order id in request")
@@ -126,7 +127,7 @@ func UpdateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     }
 
     for item := range orderRequest.ItemList {
-        newOrderItem := OrderItem{ItemId: orderRequest.ItemList[item].ItemId, 
+        newOrderItem := models.OrderItem{ItemId: orderRequest.ItemList[item].ItemId, 
                                   OrderId: orderRequest.OrderId, 
                                   Quantity: orderRequest.ItemList[item].Quantity}
         orderItems = append(orderItems, newOrderItem)
@@ -137,7 +138,7 @@ func UpdateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 //get orders by customer
 
 func GetOrders(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var orders []Order
+    var orders []models.Order
     ordersQuery := `SELECT * from orders;`
     rows, err := db.Query(ordersQuery)
 
@@ -150,7 +151,7 @@ func GetOrders(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     defer rows.Close()
 
     for rows.Next(){
-        var order Order
+        var order models.Order
         if err := rows.Scan(&order.Id, &order.CustomerId, &order.Date, &order.StatusId); err != nil{
             log.Printf("Error getting categories: %s\n", err.Error())
             http.Error(writer, "Server Error", http.StatusInternalServerError)
@@ -182,7 +183,7 @@ func orderBelongsToCustomer(customerId int, orderId int, db *sql.DB)(bool){
     return true
 }
 
-func addOrderItemsToOrder(orderItems []OrderItem, db *sql.DB){
+func addOrderItemsToOrder(orderItems []models.OrderItem, db *sql.DB){
     for _,v := range orderItems{
         if checkItemStock(v, db) <= v.Quantity{
             //there is enough stock to fulfill the addOrderItemsToOrder
@@ -203,8 +204,8 @@ func addOrderItemsToOrder(orderItems []OrderItem, db *sql.DB){
     }
 }
 
-func checkItemStock(orderItem OrderItem, db *sql.DB)int{
-    var item GroceryItem
+func checkItemStock(orderItem models.OrderItem, db *sql.DB)int{
+    var item models.GroceryItem
     query := `SELECT stock FROM grocery_items WHERE item_id = ?;`
     err := db.QueryRow(query, orderItem.ItemId).Scan(&item)
     if err != nil{

@@ -7,16 +7,11 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+    "github.com/Adam-Arezza/gocery-store/internal/models"
 )
 
-type Category struct {
-    Id int `json:"id"`
-    Name string `json:"category"`
-}
-
-
 func GetCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var categories []Category
+    var categories []models.Category
     categoriesQuery := `SELECT * from categories;`
     rows, err := db.Query(categoriesQuery)
 
@@ -29,7 +24,7 @@ func GetCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     defer rows.Close()
 
     for rows.Next(){
-        var category Category
+        var category models.Category
         if err := rows.Scan(&category.Id, &category.Name); err != nil{
             log.Printf("Error getting categories: %s\n", err.Error())
             http.Error(writer, "Server Error", http.StatusInternalServerError)
@@ -43,7 +38,7 @@ func GetCategories(writer http.ResponseWriter, r *http.Request, db *sql.DB){
 
 
 func GetCategoryById(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var category Category
+    var category models.Category
     categoryId, err := strconv.Atoi(r.PathValue("id"))
 
     if err != nil{

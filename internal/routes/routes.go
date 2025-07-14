@@ -2,7 +2,9 @@ package routes
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
+
 	"github.com/Adam-Arezza/gocery-store/internal/handlers"
 )
 
@@ -20,12 +22,14 @@ func SetRoutes(db *sql.DB) *http.ServeMux {
     })
 
     //grocery_items
+    //TODO trailing slashes don't work with URL query strings
     router.HandleFunc("GET /grocery_items", func(w http.ResponseWriter, r *http.Request){
-        handlers.GetGroceryItems(w,r,db)
+        fmt.Println("getting grocery items")
+        handlers.GetGroceryItemsHandler(w,r,db)
     })
 
     router.HandleFunc("GET /grocery_items/{id}", func(w http.ResponseWriter, r *http.Request){
-        handlers.GetGroceryItemById(w,r,db)
+        handlers.GetGroceryItemByIdHandler(w,r,db)
     })
 
     //customers

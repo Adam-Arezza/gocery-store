@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"github.com/Adam-Arezza/gocery-store/internal/database"
 	"github.com/Adam-Arezza/gocery-store/internal/routes"
+    "github.com/Adam-Arezza/gocery-store/internal/stockmanager"
 )
 
 
@@ -18,6 +19,7 @@ func main(){
     }
 
     defer db.Close()
+    go stockmanager.ManageStock(db)
 
     router := routes.SetRoutes(db)
     fmt.Println("Starting server on port 3000...")
