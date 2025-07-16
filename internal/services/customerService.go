@@ -1,17 +1,44 @@
 package services
 
-
-import(
-    "database/sql"
-    "log"
-    "fmt"
-    "github.com/Adam-Arezza/gocery-store/internal/models"
-    "regexp"
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"regexp"
+	"github.com/Adam-Arezza/gocery-store/internal/models"
 )
 
 
-func CreateCustomer(){
+func CreateCustomer(db *sql.DB, newCustomer models.Customer)([]models.Customer, error){
+    isExistingCustomer, err := checkIsExistingCustomer(newCustomer, db)
+    if err != nil {
+        return nil, fmt.Errorf("Error retreiving customer: %s", err.Error())
+    }
 
+    if !isExistingCustomer{
+        var result sql.Result
+        log.Println("No rows in result") 
+        log.Printf("Adding new customer: %s, %s\n", newCustomer.Name, newCustomer.Email)
+        newCustomerQuery := `INSERT INTO customers (name, email) VALUES(?,?);`
+        result, err = db.Exec(newCustomerQuery, newCustomer.Name, newCustomer.Email)
+
+        if err != nil{
+            log.Println("error executing add new user query")
+            return
+        }
+
+        //check result of query
+        if rows, err := result.RowsAffected(); err != nil || rows < 1{
+            log.Println("error with query result")
+            log.Printf("%s\n", err)
+            return
+        }else{
+            rowId, _ := result.LastInsertId()
+            newCustomer.Id = int(rowId)
+            json.NewEncoder(writer).Encode(newCustomer)
+            return
+        }
+    }
 }
 
 func GetCustomer(){
@@ -54,7 +81,7 @@ func checkIsExistingCustomer(customer models.Customer, db *sql.DB)(bool,error){
                                                                 &existingCustomer.Name,
                                                                 &existingCustomer.Email)
     if err != nil && err == sql.ErrNoRows{
-        return false,nil
+        return false, nil
     }
 
     if err != nil{

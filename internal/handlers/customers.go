@@ -3,23 +3,18 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-    "strconv"
-    "fmt"
-    "regexp"
-    "github.com/Adam-Arezza/gocery-store/internal/models"
-)
+	"regexp"
+	"strconv"
 
-//type Customer struct {
-//	Id    int    `json:"id"`
-//	Name  string `json:"name"`
-//	Email string `json:"email"`
-//}
+	"github.com/Adam-Arezza/gocery-store/internal/models"
+	"github.com/Adam-Arezza/gocery-store/internal/services"
+)
 
 func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     var newCustomer models.Customer
-    
     decoder := json.NewDecoder(r.Body)
     decoder.DisallowUnknownFields()
     err := decoder.Decode(&newCustomer)
@@ -29,37 +24,7 @@ func CreateCustomer(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         return
     }
 
-    isExistingCustomer, err := checkIsExistingCustomer(newCustomer, db)
-    if err != nil {
-        http.Error(writer, "Server error", http.StatusInternalServerError)
-        return
-    }
-
-    //no customer was found, try to add new one
-    if !isExistingCustomer{
-        var result sql.Result
-        log.Println("No rows in result") 
-        log.Printf("Adding new customer: %s, %s\n", newCustomer.Name, newCustomer.Email)
-        newCustomerQuery := `INSERT INTO customers (name, email) VALUES(?,?);`
-        result, err = db.Exec(newCustomerQuery, newCustomer.Name, newCustomer.Email)
-
-        if err != nil{
-            log.Println("error executing add new user query")
-            return
-        }
-
-        //check result of query
-        if rows, err := result.RowsAffected(); err != nil || rows < 1{
-            log.Println("error with query result")
-            log.Printf("%s\n", err)
-            return
-        }else{
-            rowId, _ := result.LastInsertId()
-            newCustomer.Id = int(rowId)
-            json.NewEncoder(writer).Encode(newCustomer)
-            return
-        }
-    }
+    customer, err := services.CreateCustomer(db, newCustomer)
 
     http.Error(writer, "User already exists", http.StatusConflict)
 }
