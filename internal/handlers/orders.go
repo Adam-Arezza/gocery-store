@@ -8,37 +8,8 @@ import (
 	"strconv"
 	"time"
     "github.com/Adam-Arezza/gocery-store/internal/models"
+    "github.com/Adam-Arezza/gocery-store/internal/services"
 )
-
-//type OrderRequestItem struct {
-//    ItemId int `json:"item_id"`
-//    Quantity int `json:"quantity"`
-//}
-//
-//type Order struct {
-//    Id int `json:"id"`
-//    CustomerId int `json:"customer_id"`
-//    Date string `json:"date"`
-//    StatusId int `json:"order_status"`
-//}
-//
-//type OrderItem struct{
-//    Id int `json:"id"`
-//    OrderId int `json:"order_id"`
-//    ItemId int `json:"item_id"`
-//    Quantity int `json:"quantity"`
-//}
-//
-//type OrderStatus struct{
-//    Id int `json:"id"`
-//    Status string `json:"status"`
-//}
-//
-//type UpdateOrderRequest struct{
-//    CustomerId int `json:"customer_id"`
-//    ItemList []OrderRequestItem
-//    OrderId int `json:"order_id"`
-//}
 
 //create order
 func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
@@ -53,7 +24,7 @@ func CreateOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         return
     }   
 
-    isExistingCustomer, err := checkIsExistingCustomer(customer, db)
+    isExistingCustomer, err := services.CheckIsExistingCustomer(customer, db)
     if err != nil{
         http.Error(writer, "Server Error", http.StatusInternalServerError)
         return

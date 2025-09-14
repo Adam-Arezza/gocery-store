@@ -9,10 +9,10 @@ import (
 )
 
 
-func CreateCustomer(db *sql.DB, newCustomer models.Customer)([]models.Customer, error){
-    isExistingCustomer, err := checkIsExistingCustomer(newCustomer, db)
+func CreateCustomer(db *sql.DB, newCustomer models.Customer)(error){
+    isExistingCustomer, err := CheckIsExistingCustomer(newCustomer, db)
     if err != nil {
-        return nil, fmt.Errorf("Error retreiving customer: %s", err.Error())
+        return fmt.Errorf("Error retreiving customer: %s", err.Error())
     }
 
     if !isExistingCustomer{
@@ -24,46 +24,74 @@ func CreateCustomer(db *sql.DB, newCustomer models.Customer)([]models.Customer, 
 
         if err != nil{
             log.Println("error executing add new user query")
-            return
+            return fmt.Errorf("Couldn't create customer: %s", err.Error())
         }
 
         //check result of query
         if rows, err := result.RowsAffected(); err != nil || rows < 1{
             log.Println("error with query result")
             log.Printf("%s\n", err)
-            return
-        }else{
-            rowId, _ := result.LastInsertId()
-            newCustomer.Id = int(rowId)
-            json.NewEncoder(writer).Encode(newCustomer)
-            return
+            return err
         }
     }
+    return nil
 }
 
-func GetCustomer(){
+func GetCustomer(db *sql.DB, email string) ([]models.Customer, error){
+    var customers []models.Customer
+    customersQuery := `SELECT * from customers WHERE 1=1`
+    isValidEmail := validateEmail(email)
 
-}
-
-func GetCustomerById(){
-
-}
-
-func getCustomerByEmail(email string, db *sql.DB)(models.Customer, error){
-    var customer models.Customer
-    customerQuery := `SELECT * FROM customers WHERE email = ?;`
-    err := db.QueryRow(customerQuery, email).Scan(&customer.Id,&customer.Name,&customer.Email)
-
-    if err != nil{
-        log.Printf("%s\n", err.Error())
-        return customer,err
-    }else{
-        return customer, nil
+    if email != "" && !isValidEmail{
+        err := fmt.Errorf("Invalid Email Error")
+        return nil, err
     }
+
+    if email != "" && isValidEmail{
+        customersQuery = fmt.Sprintf("%s AND email = '%s'", customersQuery, email)
+    }
+
+    rows, err := db.Query(customersQuery)
+    if err != nil{
+        log.Printf("Error fetching customers: %s\n", err.Error())
+        return nil, err
+    }
+
+    defer rows.Close()
+
+    for rows.Next(){
+        var customer models.Customer        
+        if err := rows.Scan(&customer.Id, &customer.Name, &customer.Email); err != nil{
+            log.Printf("Error getting customers: %s\n", err.Error())
+            return nil, err
+        }
+        customers = append(customers,customer)
+    }
+    return customers, nil
+}
+
+func GetCustomerById(db *sql.DB, id int) ([]models.Customer, error){
+    var customer [] models.Customer
+    customerQuery := fmt.Sprintf(`SELECT * from customers WHERE id = %d`, id)
+    rows, err := db.Query(customerQuery)
+    defer rows.Close()
+    if err != nil{
+        return nil, err
+    }
+
+    for rows.Next(){
+        var resultCustomer models.Customer        
+        if err := rows.Scan(&resultCustomer.Id, &resultCustomer.Name, &resultCustomer.Email); err != nil{
+            log.Printf("Error getting customers: %s\n", err.Error())
+            return nil, err
+        }
+        customer = append(customer,resultCustomer)
+    }
+    return customer, nil
 }
 
 func validateEmail(email string)bool{
-    	// Define a regex pattern for email validation
+    // Define a regex pattern for email validation
 	// This is a simplified regex for basic email validation
 	const emailRegexPattern = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 	
@@ -74,7 +102,7 @@ func validateEmail(email string)bool{
 	return emailRegex.MatchString(email)
 }
 
-func checkIsExistingCustomer(customer models.Customer, db *sql.DB)(bool,error){
+func CheckIsExistingCustomer(customer models.Customer, db *sql.DB)(bool,error){
     var existingCustomer models.Customer
     checkCustomerQuery := `SELECT * FROM customers WHERE email = ?;`
     err := db.QueryRow(checkCustomerQuery, customer.Email).Scan(&existingCustomer.Id,
