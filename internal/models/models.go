@@ -1,5 +1,21 @@
 package models
 
+type Status int
+
+const (
+    _ Status = iota
+    StatusCompleted 
+    StatusCreated     
+    StatusCancelled 
+)
+
+var statusString = map[Status]string{
+    StatusCreated: "created",
+    StatusCompleted: "completed",
+    StatusCancelled: "cancelled",
+}
+
+
 type GroceryItem struct {
     Id int `json:"id"`
     Name string `json:"item_name"`
@@ -14,8 +30,13 @@ type Category struct {
 }
 
 type OrderRequestItem struct {
-    ItemId int `json:"item_id"`
+    Item string `json:"item"`
     Quantity int `json:"quantity"`
+}
+
+type OrderItemRequest struct {
+    CustomerId int `json:"customer_id"`
+    OrderId int `json:"order_id"`
 }
 
 type Order struct {
@@ -34,12 +55,17 @@ type OrderItem struct{
 
 type OrderStatus struct{
     Id int `json:"id"`
-    Status string `json:"status"`
+    Status Status `json:"status"`
+}
+
+type UpdateOrderItems struct {
+    ItemId int `json:"item_id"`
+    Quantity int `json:"quantity"`
 }
 
 type UpdateOrderRequest struct{
     CustomerId int `json:"customer_id"`
-    ItemList []OrderRequestItem
+    ItemList []UpdateOrderItems `json:"order_request_item"`
     OrderId int `json:"order_id"`
 }
 

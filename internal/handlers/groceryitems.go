@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-    "log"
 	"github.com/Adam-Arezza/gocery-store/internal/services"
 )
 
 func GetGroceryItemsHandler(writer http.ResponseWriter, r *http.Request, db *sql.DB){
     groceryName := r.URL.Query().Get("name")
     if groceryName != ""{
-        log.Println("getting item")
         groceries, err := services.GetGroceryItemByName(groceryName, db)
         if err != nil{
             fmt.Printf("No grocery item with name %s", groceryName)

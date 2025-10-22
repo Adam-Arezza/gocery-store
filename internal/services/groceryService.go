@@ -40,14 +40,20 @@ func GetGroceryItemById(id int, db *sql.DB)(*models.GroceryItem, error){
 }
 
 
-func GetGroceryItemByName(name string, db *sql.DB)(models.GroceryItem, error){
+func GetGroceryItemByName(name string, db *sql.DB)(*models.GroceryItem, error){
     var groceryItem models.GroceryItem
     groceryQuery := fmt.Sprintf(`SELECT * FROM grocery_items WHERE name='%s'`, name)
-    row := db.QueryRow(groceryQuery, name).Scan(&groceryItem.Id, &groceryItem.Name, &groceryItem.UnitPrice, &groceryItem.Stock, &groceryItem.CategoryId)
+    row := db.QueryRow(groceryQuery, name).Scan(&groceryItem.Id, 
+                                                &groceryItem.Name, 
+                                                &groceryItem.UnitPrice, 
+                                                &groceryItem.Stock, 
+                                                &groceryItem.CategoryId)
+    log.Println(groceryItem)
     if row != sql.ErrNoRows{
         log.Println(groceryQuery)
-        return groceryItem, fmt.Errorf("Error getting grocery item: %s", name)
+        return &groceryItem, nil 
     }else{
-        return groceryItem, nil
+        return nil, fmt.Errorf("Error getting grocery item: %s", name)
+
     }
 }
