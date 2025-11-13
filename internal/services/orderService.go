@@ -67,8 +67,11 @@ func CancelOrder(db *sql.DB, orderId int)(bool){
         }
     }else{
         status_id := models.StatusCancelled
-        cancelOrderQuery := `UPDATE orders SET status_id=? WHERE id=?;`
-        _, err := db.Exec(cancelOrderQuery,status_id,orderId)
+        orderStatusUpdate := models.OrderStatusUpdateRequest{
+            Id: orderId,
+            StatusId: int(status_id),
+        }
+        err := UpdateOrderStatus(orderStatusUpdate, db)
         if err != nil {
             log.Printf(err.Error())
             return false
@@ -127,6 +130,15 @@ func GetOrderItems(orderItemReq models.OrderItemRequest, db *sql.DB)([] models.O
     }
 
     return orderItems, nil
+}
+
+func UpdateOrderStatus(newOrderStatus models.OrderStatusUpdateRequest, db *sql.DB)error{
+    updateQuery := `UPDATE orders SET status_id=? WHERE id=?;`
+    _, err := db.Exec(updateQuery,newOrderStatus.StatusId,newOrderStatus.Id)
+    if err != nil{
+        return fmt.Errorf(err.Error())
+    }
+    return nil
 }
 
 func checkItemStock(orderItem models.OrderItem, db *sql.DB)int{

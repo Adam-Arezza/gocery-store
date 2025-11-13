@@ -29,6 +29,11 @@ type Category struct {
     Name string `json:"category"`
 }
 
+type OrderStatusUpdateRequest struct {
+    Id int `json:"id"`
+    StatusId int `json:"status_id"`
+}
+
 type OrderRequestItem struct {
     Item string `json:"item"`
     Quantity int `json:"quantity"`

@@ -3,11 +3,13 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-    "github.com/Adam-Arezza/gocery-store/internal/models"
-    "github.com/Adam-Arezza/gocery-store/internal/services"
+
+	"github.com/Adam-Arezza/gocery-store/internal/models"
+	"github.com/Adam-Arezza/gocery-store/internal/services"
 )
 
 //create order
@@ -139,5 +141,25 @@ func CancelOrder(writer http.ResponseWriter, r *http.Request, db *sql.DB){
         writer.WriteHeader(http.StatusNotFound)
         return
     }
+}
+
+func UpdateOrderStatus(writer http.ResponseWriter, r *http.Request, db *sql.DB) error{
+    var updateOrderStatus models.OrderStatusUpdateRequest
+    decoder := json.NewDecoder(r.Body)
+    decoder.DisallowUnknownFields()
+    err := decoder.Decode(&updateOrderStatus)
+
+    if err != nil {
+        http.Error(writer, err.Error(), http.StatusBadRequest)
+        return fmt.Errorf(err.Error())
+    }
+
+    err = services.UpdateOrderStatus(updateOrderStatus, db)
+    if err != nil {
+        http.Error(writer, err.Error(), http.StatusInternalServerError)
+        return fmt.Errorf(err.Error())
+    }
+
+    return nil
 }
 

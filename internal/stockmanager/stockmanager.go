@@ -2,10 +2,12 @@ package stockmanager
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
-    "fmt"
+
 	"github.com/Adam-Arezza/gocery-store/internal/handlers"
-   // "github.com/Adam-Arezza/gocery-store/internal/models"   
+	"github.com/Adam-Arezza/gocery-store/internal/models"
+	// "github.com/Adam-Arezza/gocery-store/internal/models"
 )
 
 type UpdateItem struct {
@@ -53,17 +55,30 @@ func ProcessOrders(db *sql.DB){
 //get all the orders that are in the created status
 //remove the quantity in the order from the stock
 //change order status to completed
-    orderQuery := `SELECT * from orders WHERE status_id = 1`
+    orderQuery := `SELECT * FROM orders WHERE status_id = 1`
     currentOrders, err := db.Query(orderQuery)  
     if err != nil{
         fmt.Printf("Error in processing orders: %s", err.Error())
     }
+
     for currentOrders.Next(){
-        //scan row to variable
+        var order models.Order 
+        var groceryItem models.GroceryItem
+        currentOrders.Scan(&order.Id, &order.CustomerId, &order.Date, &order.StatusId)
+        itemsQuery := `SELECT * FROM order_items WHERE customer_id=? AND order_id=?;`
+        rows, err := db.Query(itemsQuery, order.CustomerId, order.Id)
+        if err != nil {
+            log.Printf(err.Error())
+        }
+        for rows.Next(){
+            rows.Scan(&groceryItem.Id, &groceryItem.CategoryId, &groceryItem.Name, &groceryItem.Stock, &groceryItem.UnitPrice)
+        }
+        //updateQuery := `UPDATE grocery_items SET stock= stock - ?;`
     }
 }
 
 func ManageStock(db *sql.DB){
     CheckInventory(db)
-    //UpdateStock()
+    //UpdateStock(db)
+    //ProcessOrders(db)
 }
