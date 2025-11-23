@@ -58,15 +58,21 @@ func GetGroceryItemByName(name string, db *sql.DB)(*models.GroceryItem, error){
     }
 }
 
-func UpdateGroceryItem(db *sql.DB, itemId int, newStock int)error{
-    updateQuery := `UPDATE grocery_items SET stock = ? WHERE id = ?;`
-    result, err := db.Exec(updateQuery, newStock, itemId)
-    if err!= nil{
+func UpdateGroceryItem(db *sql.DB, items []models.UpdateGroceryStockRequest)error{ 
+    tx, err := db.Begin()
+    updateQuery, err := db.Prepare(`UPDATE grocery_items SET stock = ? WHERE id = ?;`)
+    if err != nil {
+        tx.Rollback()
         return fmt.Errorf("Error updating stock items: %s", err.Error())
     }
-    rowsAffected,_ := result.RowsAffected()
-    if rowsAffected != 0 {
-        fmt.Printf("updated %d rows\n", rowsAffected)
+    defer updateQuery.Close()
+    
+    for _, item := range items {
+        _, err := updateQuery.Exec(item.NewStock, item.ItemId)
+        if err != nil {
+            tx.Rollback()
+            return fmt.Errorf("Error updating stock items: %s", err.Error())
+        }
     }
-    return nil
+    return tx.Commit()
 }

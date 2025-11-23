@@ -44,7 +44,7 @@ func GetGroceryItemByIdHandler(writer http.ResponseWriter, r *http.Request, db *
 }
 
 func UpdateGroceryItemHandler(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-    var groceryUpdateReq models.UpdateGroceryStockRequest
+    var groceryUpdateReq []models.UpdateGroceryStockRequest
     decoder := json.NewDecoder(r.Body)
     decoder.DisallowUnknownFields()
     err := decoder.Decode(&groceryUpdateReq)
@@ -54,7 +54,7 @@ func UpdateGroceryItemHandler(writer http.ResponseWriter, r *http.Request, db *s
         return
     }
 
-    err = services.UpdateGroceryItem(db, groceryUpdateReq.ItemId, groceryUpdateReq.NewStock)
+    err = services.UpdateGroceryItem(db, groceryUpdateReq)
 
     if err != nil {
         http.Error(writer, err.Error(), http.StatusInternalServerError)
