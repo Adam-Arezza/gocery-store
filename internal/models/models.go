@@ -74,6 +74,11 @@ type UpdateOrderRequest struct{
     OrderId int `json:"order_id"`
 }
 
+type UpdateGroceryStockRequest struct {
+    ItemId int `json:"item_id"`
+    NewStock int `json:"stock"`
+}
+
 type Customer struct {
 	Id    int    `json:"id"`
 	Name  string `json:"name"`

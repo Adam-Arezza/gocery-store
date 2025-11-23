@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/Adam-Arezza/gocery-store/internal/models"
 	"github.com/Adam-Arezza/gocery-store/internal/services"
 )
 
@@ -41,23 +43,21 @@ func GetGroceryItemByIdHandler(writer http.ResponseWriter, r *http.Request, db *
     return
 }
 
-//func getGroceryItemByNameHandler(writer http.ResponseWriter, r *http.Request, db *sql.DB){
-//    groceryName := r.URL.Query().Get("name")
-//    groceries, err := services.GetGroceryItemByName(groceryName, db)
-//    if err != nil{
-//    }
-//    json.NewEncoder(writer).Encode(groceries)
-//    return
-//}
+func UpdateGroceryItemHandler(writer http.ResponseWriter, r *http.Request, db *sql.DB){
+    var groceryUpdateReq models.UpdateGroceryStockRequest
+    decoder := json.NewDecoder(r.Body)
+    decoder.DisallowUnknownFields()
+    err := decoder.Decode(&groceryUpdateReq)
 
-func UpdateGroceryItemHandler(db *sql.DB, itemId int, newStock int){
-    updateQuery := `UPDATE grocery_items SET stock = ? WHERE id = ?;`
-    result, err := db.Exec(updateQuery, newStock, itemId)
-    if err!= nil{
-        fmt.Printf("Error updating stock items: %s", err.Error())
+    if err != nil {
+        http.Error(writer, err.Error(), http.StatusBadRequest)
+        return
     }
-    rowsAffected,_ := result.RowsAffected()
-    if rowsAffected != 0 {
-        fmt.Printf("updated %d rows\n", rowsAffected)
+
+    err = services.UpdateGroceryItem(db, groceryUpdateReq.ItemId, groceryUpdateReq.NewStock)
+
+    if err != nil {
+        http.Error(writer, err.Error(), http.StatusInternalServerError)
+        return
     }
 }

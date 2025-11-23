@@ -57,3 +57,16 @@ func GetGroceryItemByName(name string, db *sql.DB)(*models.GroceryItem, error){
 
     }
 }
+
+func UpdateGroceryItem(db *sql.DB, itemId int, newStock int)error{
+    updateQuery := `UPDATE grocery_items SET stock = ? WHERE id = ?;`
+    result, err := db.Exec(updateQuery, newStock, itemId)
+    if err!= nil{
+        return fmt.Errorf("Error updating stock items: %s", err.Error())
+    }
+    rowsAffected,_ := result.RowsAffected()
+    if rowsAffected != 0 {
+        fmt.Printf("updated %d rows\n", rowsAffected)
+    }
+    return nil
+}
